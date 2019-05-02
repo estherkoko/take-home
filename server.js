@@ -1,5 +1,6 @@
 const express = require('express')
 const app = express()
+const cors = require('cors')
 const port = 8000
 const sqlite3 = require('sqlite3').verbose()
 const bodyParser = require("body-parser")
@@ -7,6 +8,7 @@ const bodyParser = require("body-parser")
 //preprocessing to parse the body of post request
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json())
+app.use(cors())
 
 //start server
 app.listen(port, () => {
@@ -33,7 +35,6 @@ app.get('/source', (req, res, next) => {
         return;
       }
       res.json({
-        "message": "success",
         "data": row
       })
     });
