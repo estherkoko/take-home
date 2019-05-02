@@ -5,21 +5,9 @@ const port = 8000
 const sqlite3 = require('sqlite3').verbose()
 const bodyParser = require("body-parser")
 
-//preprocessing to parse the body of post request
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json())
-app.use(cors())
-
-//start server
-app.listen(port, () => {
-  console.log('Server running on port %PORT%'.replace('%PORT%', port))
-})
-
-//database connection
-let db = new sqlite3.Database('./db.sqlite', (err) => {
-  if (err) { console.error(err.message); }
-  console.log('Connected to the Redox database.');
-});
+postRequestParser();
+serverStarter();
+let db = dbConnector();
 
 // root endpoint
 app.get('/', (req, res, next) => {
@@ -170,3 +158,25 @@ app.delete("/source/:id", (req, res, next) => {
           res.json({"message":"deleted", changes: this.changes})
   });
 })
+
+function dbConnector() {
+  return new sqlite3.Database('./db.sqlite', (err) => {
+    if (err) {
+      console.error(err.message);
+    }
+    console.log('Connected to the Redox database.');
+  });
+}
+
+function serverStarter() {
+  app.listen(port, () => {
+    console.log('Server running on port %PORT%'.replace('%PORT%', port));
+  });
+}
+
+function postRequestParser() {
+  app.use(bodyParser.urlencoded({ extended: false }));
+  app.use(bodyParser.json());
+  app.use(cors());
+}
+
