@@ -14,7 +14,6 @@ app.get('/', (req, res, next) => {
   res.json({ "message": "Ok" })
 });
 
-//fetch all sources and basic info
 app.get('/source', (req, res, next) => {
   db.serialize(() => {
     db.all(`SELECT id, name from source`, (err, row) => {
@@ -29,7 +28,6 @@ app.get('/source', (req, res, next) => {
   });
 });
 
-//fetch single source by id and display information in greater details
 app.get('/source/:id', (req, res, next) => {
   db.serialize(() => {
     let sql = `SELECT *  from source where id = ?`
@@ -46,7 +44,6 @@ app.get('/source/:id', (req, res, next) => {
   });
 });
 
-//fetch messages for a single source
 app.get('/source/:id/message', (req, res, next) => {
   db.serialize(() => {
     let sql = `SELECT message from message where source_id = ?`
@@ -57,17 +54,15 @@ app.get('/source/:id/message', (req, res, next) => {
         return;
       }
       res.json({
-        "message": "success",
         "data": row
       })
     });
   });
 });
 
-//fetch aggregate status of messages for a particular source
 app.get('/message/:id/', (req, res, next) => {
   db.serialize(() => {
-    let sql = `select  count(*) status_count, status from message where source_id = ? group by status`
+    let sql = `select id, status,  count(*) status_count from message where source_id = ? group by status`
     let params = [req.params.id]
     db.all(sql, params, (err, row) => {
       if (err) {
@@ -95,13 +90,13 @@ app.post('/source', (req, res, next) => {
 })
 
 
-app.patch('/source/:id', (req, res, next) => {
+app.patch('/source', (req, res, next) => {
   let data = {
     name: req.body.name,
     environment: req.body.environment,
     encoding: req.body.encoding
   }
-  let params = [data.name, data.environment, data.encoding, req.params.id]
+  let params = [data.name, data.environment, data.encoding, req.body.id]
   let sql = `UPDATE source set name = ?, environment = ?, encoding = ? WHERE id = ?`;
   db.run(sql, params, function (err) {
     if (err) {
@@ -110,27 +105,27 @@ app.patch('/source/:id', (req, res, next) => {
     }
     res.json({
       data: data,
-      changes: this.changes
+      changes: this.changes,
     })
     console.log(`Row(s) updated: ${this.changes}`);
-
   });
 
 });
 
 
 app.delete("/source", (req, res, next) => {
-  db.run(
-      'DELETE FROM source WHERE id = ?',
-      req.body.id,
-      function (err, result) {
-          if (err){
-              res.status(400).json({"error": res.message})
-              return;
-          }
-          res.json({"message":"deleted", changes: this.changes})
-  });
+  runDeleteQuery(req, res);
 })
+
+function runDeleteQuery(req, res) {
+  db.run('DELETE FROM source WHERE id = ?', req.body.id, function (err, result) {
+    if (err) {
+      res.status(400).json({ "error": res.message });
+      return;
+    }
+    res.json({ "message": "deleted", changes: this.changes });
+  });
+}
 
 function runInsertQuery(sql, params, res, data) {
   db.run(sql, params, function (err, result) {

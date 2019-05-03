@@ -1,9 +1,8 @@
 import React, { Component } from 'react';
-import { Button, Modal, ModalBody, ModalFooter, ModalHeader,Form, FormGroup, Label, Input } from 'reactstrap';
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader, Form, FormGroup, Label, Input } from 'reactstrap';
 import NewSourceModal from './_newSourceModal';
 
 const URL = 'http://localhost:8000/source/';
-
 class _home extends Component {
 
     constructor(props) {
@@ -12,23 +11,27 @@ class _home extends Component {
         this.state = {
             data: [],
             sources: [],
+            messages: [],
+            sourceDetails: [],
+            messageDetails: [],
             modal: false,
             show: false,
+            showMessage: false,
             name: '',
             environment: '',
             encoding: '',
-            source: {
-                id: ''
-              },
-            sourceDetails: []
+            source: { id: '' },
+            selectedSourceId: '',
         };
 
         this.toggle = this.toggle.bind(this);
         this.handleSourceDetails = this.handleSourceDetails.bind(this);
+        this.deleteSource = this.deleteSource.bind(this);
+        this.updateSourceDetails = this.updateSourceDetails.bind(this);
+        this.handleShowMessages = this.handleShowMessages.bind(this);
         this.handleUpdateDetails = this.handleUpdateDetails.bind(this);
         this.handleClose = this.handleClose.bind(this);
         this.onChange = this.onChange.bind(this);
-
 
     }
 
@@ -50,15 +53,19 @@ class _home extends Component {
         this.showSourceDetails(this.state.sourceId);
         event.preventDefault();
     }
-    
+
     handleUpdateDetails(event) {
         this.updateSourceDetails(this.state.sourceId);
         event.preventDefault();
     }
-    handleDeleteSource(event){
+    handleDeleteSource(event) {
         this.updateSourceDetails(this.state.sourceId);
         event.preventDefault();
 
+    }
+    handleShowMessages(event) {
+        this.showSourceMessages(this.state.sourceId);
+        event.preventDefault();
     }
     getAllSources() {
         fetch(URL)
@@ -75,25 +82,41 @@ class _home extends Component {
             .then(sources => {
                 this.setState({ sourceDetails: sources.data });
                 this.setState({ show: true });
+                console.log(sourceId);
+                this.setState({ selectedSourceId: sourceId });
             });
     }
-    updateSourceDetails(sourceId) {
-        let data = {};
-        data.environment = this.state.sourceDetails.environment;
-        data.encoding = this.state.sourceDetails.environment;
-        data.name = this.state.sourceDetails.name;
-        fetch(URL + sourceId,{
+    updateSourceDetails(event) {
+        event.preventDefault();
+        let source = {
+            id: this.state.selectedSourceId,
+            name: event.target.name.value,
+            environment: event.target.environment.value,
+            encoding: event.target.encoding.value,
+        };
+        fetch(URL, {
             method: 'PATCH',
-            body: JSON.stringify(data),
+            body: JSON.stringify(source),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+            }
         })
             .then(response => response.json())
             .then(response => console.log('Success:', JSON.stringify(response)))
             .catch(error => console.error('Error:', error));
     }
-    deleteSource(source){
+
+    showSourceMessages(sourceId) {
+        fetch('http://localhost:8000/message/' + sourceId)
+            .then(response => response.json())
+            .then(messages => {
+                this.setState({ messageDetails: messages.data });
+                this.setState({ showMessage: true });
+            });
+    }
+    deleteSource(source) {
         this.sendSourceDeleteRequest(source);
-            //close modal on delete
-            //remove deleted source from sources array
         this.removeDeletedFromView(source);
     }
 
@@ -116,14 +139,20 @@ class _home extends Component {
     }
 
     render() {
-
+        const messageList = this.state.messageDetails.map((message) =>
+            <tr key={message.id}>
+                <td>{message.id}</td>
+                <td>{message.status}</td>
+                <td>{message.status_count}</td>
+            </tr>
+        );
         const sourceList = this.state.sources.map((source) =>
             <tr key={source.id}>
                 <td>{source.id}</td>
                 <td>{source.name}</td>
                 <td>
                     <Button color="secondary" className="mx-2" onClick={() => this.showSourceDetails(source.id)}>Source Info</Button>
-                    <Button color="primary" className="mx-2" onClick={this.toggle}>Messages</Button>
+                    <Button color="primary" className="mx-2" onClick={() => this.showSourceMessages(source.id)}>Messages</Button>
                 </td>
             </tr>
         );
@@ -154,11 +183,11 @@ class _home extends Component {
                             <Form onSubmit={this.updateSourceDetails}>
                                 <FormGroup>
                                     <Label for="name">Source Name</Label>
-                                    <Input type="text" defaultValue={this.state.sourceDetails.name} onChange={this.onChange} />
+                                    <Input type="text" name="name" defaultValue={this.state.sourceDetails.name} onChange={this.onChange} ref={(name) => { this.state.sourceDetails.name = name; }} />
                                 </FormGroup>
                                 <FormGroup>
                                     <Label for="environment">Environment</Label>
-                                    <Input type="select" value={this.state.sourceDetails.environment} name="sourceDetails.environment" onChange ={this.onChange}>
+                                    <Input type="select" name="environment" defaultValue={this.state.sourceDetails.environment} onChange={this.onChange}>
                                         <option value="">Choose an environment</option>
                                         <option value="development">Development</option>
                                         <option value="staging">Staging</option>
@@ -167,19 +196,38 @@ class _home extends Component {
                                 </FormGroup>
                                 <FormGroup>
                                     <Label for="encoding">Encoding</Label>
-                                    <Input type="select" defaultValue={this.state.sourceDetails.encoding}>
+                                    <Input type="select" name="encoding" defaultValue={this.state.sourceDetails.encoding} onChange={this.onChange}>
                                         <option value="">Choose an encoding</option>
                                         <option value="utf8">UTF8</option>
                                         <option value="latin1">Latin1</option>
                                     </Input>
                                 </FormGroup>
-                                <Button color="primary" onClick={this.handleUpdateDetails}>Update Source</Button>
+                                <Button color="primary" type="submit">Update Source</Button>
                                 <Button color="danger mx-2" onClick={() => this.deleteSource(this.state.sourceDetails)}>Delete Source :(</Button>
                             </Form>
                         </ModalBody>
                         <ModalFooter>
                             <Button variant="secondary" onClick={this.handleClose}>Close</Button>
-                            <Button variant="primary" onClick={this.handleClose}>Save Changes</Button>
+                        </ModalFooter>
+                    </Modal>
+                </>
+                <>
+                    <Modal isOpen={this.state.showMessage}>
+                        <ModalHeader><span className="font-weight-bold">Message Details</span> - <span className="text-muted">{this.state.messageDetails.id}</span></ModalHeader>
+                        <ModalBody className="font-weight-bold">
+                            <table className="table text-center">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Message ID</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Status Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>{messageList}</tbody>
+                            </table>
+                        </ModalBody>
+                        <ModalFooter>
+                            <Button variant="secondary" onClick={this.handleClose}>Close</Button>
                         </ModalFooter>
                     </Modal>
                 </>

@@ -20,13 +20,17 @@ class _NewSourceModal extends Component {
     }
     
     toggle() {
-        this.setState(prevState => ({
-            modal: !prevState.modal
-        }));
+        this.setState({ modal: false });
+
     }
 
     saveNewSource(event) {
-        let newSource = this.hydateSource();
+        let newSource = {
+            id: uuid.v1(),
+            name: this.state.name,
+            environment: this.state.environment,
+            encoding: this.state.encoding,
+        };
         this.postSourceData(newSource);
         this.resetForm();
         event.preventDefault();
@@ -42,15 +46,6 @@ class _NewSourceModal extends Component {
         }).then(res => res.json())
             .then(response => console.log('Success:', JSON.stringify(response)))
             .catch(error => console.error('Error:', error));
-    }
-
-    hydateSource() {
-        return {
-            id: uuid.v1(),
-            name: this.state.name,
-            environment: this.state.environment,
-            encoding: this.state.encoding,
-        };
     }
 
     resetForm() {
