@@ -40,7 +40,6 @@ app.get('/source/:id', (req, res, next) => {
         return;
       }
       res.json({
-        "message": "success",
         "data": row
       })
     });
@@ -83,44 +82,19 @@ app.get('/message/:id/', (req, res, next) => {
   });
 });
 
-//insert a new source with info 
 app.post('/source', (req, res, next) => {
-  let errors = []
-  if (!req.body.id) {
-    errors.push("No ID specified");
-  }
-  if (!req.body.name) {
-    errors.push("No name specified");
-  }
-  if (!req.body.environment) {
-    errors.push("No environment specified");
-  }
+  let errors = validateFields(req);
   if (errors.length) {
     res.status(400).json({ "error": errors.join(",") });
     return;
   }
-  let data = {
-    id: req.body.id,
-    name: req.body.name,
-    environment: req.body.environment,
-    encoding: req.body.encoding
-  }
+  let data = setupSourceData(req)
   let sql = `INSERT INTO source (id, name, environment, encoding) VALUES (?,?,?,?)`
   let params = [data.id, data.name, data.environment, data.encoding]
-  db.run(sql, params, function (err, result) {
-    if (err) {
-      res.status(400).json({ "error": err.message })
-      return;
-    }
-    res.json({
-      "message": "success",
-      "data": data,
-      "id": this.lastID
-    })
-  });
+  runInsertQuery(sql, params, res, data);
 })
 
-//update existing source information
+
 app.patch('/source/:id', (req, res, next) => {
   let data = {
     name: req.body.name,
@@ -135,7 +109,6 @@ app.patch('/source/:id', (req, res, next) => {
       return;
     }
     res.json({
-      message: "success",
       data: data,
       changes: this.changes
     })
@@ -145,11 +118,11 @@ app.patch('/source/:id', (req, res, next) => {
 
 });
 
-//delete source by id
-app.delete("/source/:id", (req, res, next) => {
+
+app.delete("/source", (req, res, next) => {
   db.run(
       'DELETE FROM source WHERE id = ?',
-      req.params.id,
+      req.body.id,
       function (err, result) {
           if (err){
               res.status(400).json({"error": res.message})
@@ -158,6 +131,43 @@ app.delete("/source/:id", (req, res, next) => {
           res.json({"message":"deleted", changes: this.changes})
   });
 })
+
+function runInsertQuery(sql, params, res, data) {
+  db.run(sql, params, function (err, result) {
+    if (err) {
+      res.status(400).json({ "error": err.message });
+      return;
+    }
+    res.json({
+      "message": "success",
+      "data": data,
+      "id": this.lastID
+    });
+  });
+}
+
+function setupSourceData(req) {
+  return {
+    id: req.body.id,
+    name: req.body.name,
+    environment: req.body.environment,
+    encoding: req.body.encoding
+  };
+}
+
+function validateFields(req) {
+  let errors = [];
+  if (!req.body.id) {
+    errors.push("No ID specified");
+  }
+  if (!req.body.name) {
+    errors.push("No name specified");
+  }
+  if (!req.body.environment) {
+    errors.push("No environment specified");
+  }
+  return errors;
+}
 
 function dbConnector() {
   return new sqlite3.Database('./db.sqlite', (err) => {

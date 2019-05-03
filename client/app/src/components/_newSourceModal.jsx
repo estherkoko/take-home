@@ -8,7 +8,7 @@ class _NewSourceModal extends Component {
         this.state = {
             data: [],
             sources: [],
-            modal: true,
+            modal: false,
             name: '',
             environment: '',
             encoding: ''
@@ -83,7 +83,7 @@ class _NewSourceModal extends Component {
                             </FormGroup>        
                             <FormGroup>
                                 <Label for="environment">Environment</Label>
-                                <Input type="select"  value={this.state.environment} name="environment" id="environment" onChange={this.handleChange}>
+                                <Input type="select"  value={this.state.environment} name="environment" id="environment" onChange={this.handleChange} >
                                     <option value="">Choose an environment</option>
                                     <option value="development">Development</option>
                                     <option value="staging">Staging</option>
